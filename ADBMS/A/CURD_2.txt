@@ -1,0 +1,140 @@
+// Connect to the MongoDB instance and create the database
+use placementDB;
+
+// Create the 'placements' collection with validation rules
+db.createCollection("placements", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["name", "company", "designation", "salary", "graduated"],
+      properties: {
+        name: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        company: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        designation: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        salary: {
+          bsonType: "int",
+          minimum: 0,
+          description: "must be an integer and is required"
+        },
+        graduated: {
+          bsonType: "int",
+          description: "must be an integer and is required"
+        }
+      }
+    }
+  }
+});
+
+// Insert a batch of placement documents into the placements collection
+db.placements.insertMany([
+  { name: "Raj", company: "TCS", designation: "Software Engineer", salary: 6, graduated: 2023 },
+  { name: "Priya", company: "Infosys", designation: "Data Analyst", salary: 7, graduated: 2022 },
+  { name: "Anil", company: "Wipro", designation: "System Engineer", salary: 5, graduated: 2023 },
+  { name: "Sita", company: "HCL", designation: "Network Engineer", salary: 8, graduated: 2021 }
+]);
+
+// Insert a single document for a new placement with validation checks
+try {
+  db.placements.insertOne({
+    name: "Reema",
+    company: "Capgemini",
+    designation: "Cyber Security Analyst",
+    salary: 9,
+    graduated: 2022
+  });
+  print("Document inserted successfully");
+} catch (e) {
+  print("Error inserting document:", e.message);
+}
+
+// Removing Documents
+// Remove the document for the placement of "Raj"
+db.placements.deleteOne({ name: "Raj" });
+
+// Remove all documents for placements with a salary less than 6 LPA
+db.placements.deleteMany({ salary: { $lt: 6 } });
+
+// Updating Documents
+// Replace Priya's document with updated designation and salary
+db.placements.replaceOne(
+  { name: "Priya" },
+  { name: "Priya", company: "Infosys", designation: "Senior Data Analyst", salary: 8, graduated: 2022 }
+);
+
+// Update Anil's salary to 6 LPA without replacing the entire document
+db.placements.updateOne(
+  { name: "Anil" },
+  { $set: { salary: 6 } }
+);
+
+// Upsert Reema's document - update if exists, insert if not
+db.placements.updateOne(
+  { name: "Reema" },
+  { $set: { company: "Capgemini", designation: "Cyber Security Analyst", salary: 9, graduated: 2022 } },
+  { upsert: true }
+);
+
+// Update all documents to add 'highSalary' field for placements with a salary above 7 LPA
+db.placements.updateMany(
+  { salary: { $gt: 7 } },
+  { $set: { highSalary: true } }
+);
+
+// Return the updated document after changing Sita's company to "Cisco"
+db.placements.findOneAndUpdate(
+  { name: "Sita" },
+  { $set: { company: "Cisco" } },
+  { returnDocument: "after" }
+);
+
+// Executing Queries
+// Find and display all placement documents
+db.placements.find().pretty();
+
+// Find and display the document for the placement of "Anil"
+db.placements.find({ name: "Anil" }).pretty();
+
+// Retrieve all placements with a salary greater than 6 LPA
+db.placements.find({ salary: { $gt: 6 } }).pretty();
+
+// Retrieve placements where the name is either "Sita" or the graduated year is 2023
+db.placements.find({ $or: [{ name: "Sita" }, { graduated: 2023 }] }).pretty();
+
+// Retrieve placements where the salary is not less than 7 LPA
+db.placements.find({ salary: { $gte: 7 } }).pretty();
+
+// Retrieve placements where the salary is not 6 LPA
+db.placements.find({ salary: { $ne: 6 } }).pretty();
+
+// Retrieve documents where the department field does not exist
+db.placements.find({ department: { $exists: false } }).pretty();
+
+// Find placements where the company name ends with the letter "o"
+db.placements.find({ company: /o$/ }).pretty();
+
+// Find placements where the designation includes "Engineer"
+db.placements.find({ designation: /Engineer/ }).pretty();
+
+// Execute a query using $where to find placements with a salary greater than 6 LPA
+db.placements.find({ $where: function() { return this.salary > 6; } }).pretty();
+
+// Limit the number of results to 2 when retrieving placement documents
+db.placements.find().limit(2).pretty();
+
+// Skip the first document and retrieve the rest
+db.placements.find().skip(1).pretty();
+
+// Sort the placement documents by salary in descending order
+db.placements.find().sort({ salary: -1 }).pretty();
+
+// Advanced query: find placements with a salary greater than 5 LPA, limit to 2, skip 1, and sort by name in ascending order
+db.placements.find({ salary: { $gt: 5 } }).sort({ name: 1 }).skip(1).limit(2).pretty();

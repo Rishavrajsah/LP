@@ -1,0 +1,141 @@
+// Connect to the MongoDB instance and create the database
+use clubDB;
+
+// Create the 'studentClubs' collection with validation rules
+db.createCollection("studentClubs", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["club", "president", "members", "established", "active"],
+      properties: {
+        club: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        president: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        members: {
+          bsonType: "int",
+          minimum: 0,
+          description: "must be a non-negative integer and is required"
+        },
+        established: {
+          bsonType: "int",
+          minimum: 1900,
+          description: "must be a valid year and is required"
+        },
+        active: {
+          bsonType: "bool",
+          description: "must be a boolean and is required"
+        }
+      }
+    }
+  }
+});
+
+// Insert a batch of club documents into the studentClubs collection
+db.studentClubs.insertMany([
+  { club: "Coding Club", president: "Raj", members: 50, established: 2019, active: true },
+  { club: "Literature Club", president: "Priya", members: 30, established: 2018, active: true },
+  { club: "Robotics Club", president: "Anil", members: 40, established: 2020, active: false },
+  { club: "Debate Club", president: "Sita", members: 20, established: 2021, active: true }
+]);
+
+// Insert a single document for a new club with validation checks
+try {
+  db.studentClubs.insertOne({
+    club: "Photography Club",
+    president: "Reema",
+    members: 25,
+    established: 2022,
+    active: true
+  });
+  print("Document inserted successfully");
+} catch (e) {
+  print("Error inserting document:", e.message);
+}
+
+// Removing Documents
+// Remove the document for the club named "Coding Club"
+db.studentClubs.deleteOne({ club: "Coding Club" });
+
+// Remove all documents for clubs that are not active
+db.studentClubs.deleteMany({ active: false });
+
+// Updating Documents
+// Replace the document for "Literature Club" with a new one that updates the members count to 35
+db.studentClubs.replaceOne(
+  { club: "Literature Club" },
+  { club: "Literature Club", president: "Priya", members: 35, established: 2018, active: true }
+);
+
+// Update the number of members in "Robotics Club" to 45 without replacing the entire document
+db.studentClubs.updateOne(
+  { club: "Robotics Club" },
+  { $set: { members: 45 } }
+);
+
+// Upsert "Photography Club" - update if exists, insert if not
+db.studentClubs.updateOne(
+  { club: "Photography Club" },
+  { $set: { president: "Reema", members: 25, established: 2022, active: true } },
+  { upsert: true }
+);
+
+// Update all documents to add 'majorEvent' field for clubs established before 2020
+db.studentClubs.updateMany(
+  { established: { $lt: 2020 } },
+  { $set: { majorEvent: true } }
+);
+
+// Return the updated document after changing the president of "Debate Club" to "Neha"
+db.studentClubs.findOneAndUpdate(
+  { club: "Debate Club" },
+  { $set: { president: "Neha" } },
+  { returnDocument: "after" }
+);
+
+// Executing Queries
+// Find and display all club documents
+db.studentClubs.find().pretty();
+
+// Find and display the document for the club named "Robotics Club"
+db.studentClubs.find({ club: "Robotics Club" }).pretty();
+
+// Retrieve all clubs with more than 30 members
+db.studentClubs.find({ members: { $gt: 30 } }).pretty();
+
+// Retrieve clubs where the president is either "Sita" or the club was established in 2020
+db.studentClubs.find({ $or: [{ president: "Sita" }, { established: 2020 }] }).pretty();
+
+// Retrieve clubs that are active
+db.studentClubs.find({ active: true }).pretty();
+
+// Retrieve clubs that were not established in 2019
+db.studentClubs.find({ established: { $ne: 2019 } }).pretty();
+
+// Retrieve documents where the vicePresident field does not exist
+db.studentClubs.find({ vicePresident: { $exists: false } }).pretty();
+
+// Find clubs where the club name ends with the letter "b"
+db.studentClubs.find({ club: /b$/ }).pretty();
+
+// Find clubs where the club name includes "Club"
+db.studentClubs.find({ club: /Club/ }).pretty();
+
+// Execute a query using $where to find clubs with more than 20 members
+db.studentClubs.find({ $where: function() { return this.members > 20; } }).pretty();
+
+// Limit the number of results to 2 when retrieving club documents
+db.studentClubs.find().limit(2).pretty();
+
+// Skip the first document and retrieve the rest
+db.studentClubs.find().skip(1).pretty();
+
+// Sort the club documents by the number of members in ascending order
+db.studentClubs.find().sort({ members: 1 }).pretty();
+
+// Advanced query: find clubs with more than 25 members, limit to 2, skip 1, and sort by name in ascending order
+db.studentClubs.find({ members: { $gt: 25 } }).sort({ club: 1 }).skip(1).limit(2).pretty();

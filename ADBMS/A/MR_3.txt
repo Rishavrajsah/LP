@@ -1,0 +1,53 @@
+db.sales.insertMany([
+  { customerId: "customer123", purchaseAmount: 200 },
+  { customerId: "customer123", purchaseAmount: 800 },
+  { customerId: "customer123", purchaseAmount: 500 },
+  { customerId: "customer456", purchaseAmount: 150 },
+  { customerId: "customer456", purchaseAmount: 1000 },
+  { customerId: "customer789", purchaseAmount: 300 }
+]);
+
+
+db.sales.mapReduce(
+  function() {
+    // Map function: Emit customerId as the key and 1 as the value (each purchase is counted as 1)
+    emit(this.customerId, 1);
+  },
+  function(key, values) {
+    // Reduce function: Sum all values to get the total number of purchases
+    return Array.sum(values);
+  },
+  {
+    out: "customerTotalPurchases"  // Output collection to store the results
+  }
+);
+
+
+db.sales.mapReduce(
+  function() {
+    // Map function: Emit customerId as the key and an object containing:
+    // - max (initial value for the maximum purchase value)
+    // - min (initial value for the minimum purchase value)
+    emit(this.customerId, {
+      max: this.purchaseAmount,  // Initialize the max value with the current purchase
+      min: this.purchaseAmount   // Initialize the min value with the current purchase
+    });
+  },
+  function(key, values) {
+    // Reduce function: Determine the maximum and minimum purchase values for each customer
+    var result = { max: -Infinity, min: Infinity };
+
+    values.forEach(function(value) {
+      result.max = Math.max(result.max, value.max);  // Update the max purchase value
+      result.min = Math.min(result.min, value.min);  // Update the min purchase value
+    });
+
+    return result;
+  },
+  {
+    out: "customerPurchaseMinMax"  // Output collection to store the results
+  }
+);
+
+
+db.customerPurchaseMinMax.find();

@@ -1,0 +1,51 @@
+
+// Switch to the database (or create it if it doesn’t exist)
+use studentDB
+
+// Create the collection (if it doesn't already exist)
+db.createCollection("students")
+
+// Insert sample student documents
+db.students.insertMany([
+  { name: "Raj", major: "Computer Science", gpa: 3.5, email: "raj@example.com" },
+  { name: "Priya", major: "Literature", gpa: 3.7, email: "priya@example.com" },
+  { name: "Anil", major: "Engineering", gpa: 3.6, email: "anil@example.com" },
+  { name: "Sita", major: "Computer Science", gpa: 3.8, email: "sita@example.com" }
+])
+
+// Task 1: Create a single-field index on the name field in the students collection
+db.students.createIndex({ name: 1 })
+// Verify the creation of the single-field index
+db.students.getIndexes()
+
+// Task 2: Create a compound index on the major and gpa fields
+db.students.createIndex({ major: 1, gpa: -1 })
+// Verify the creation of the compound index
+db.students.getIndexes()
+
+// Task 3: Create a unique index on the email field
+db.students.createIndex({ email: 1 }, { unique: true })
+// Verify the creation of the unique index
+db.students.getIndexes()
+
+// Task 4: Remove duplicate entries based on the email field
+db.students.aggregate([
+  { $group: { _id: "$email", uniqueIds: { $addToSet: "$_id" }, count: { $sum: 1 } } },
+  { $match: { count: { $gt: 1 } } }
+]).forEach((doc) => {
+  doc.uniqueIds.shift()  // Keep one document, remove others
+  db.students.deleteMany({ _id: { $in: doc.uniqueIds } })
+})
+
+// Task 5: Drop the unique index on the email field
+db.students.dropIndex({ email: 1 })
+// Verify the removal of the unique index
+db.students.getIndexes()
+
+// Task 6: Drop the compound index on the major and gpa fields
+db.students.dropIndex({ major: 1, gpa: -1 })
+// Verify the removal of the compound index
+db.students.getIndexes()
+
+// Task 7: Retrieve and print the index statistics for the students collection
+db.students.stats().indexDetails

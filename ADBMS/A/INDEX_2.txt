@@ -1,0 +1,53 @@
+// Connect to MongoDB shell (use your database connection details if necessary)
+mongo
+
+// Switch to the database (or create it if it doesn’t exist)
+use clubDB
+
+// Create the collection (if it doesn't already exist)
+db.createCollection("students_club")
+
+// Insert sample club membership documents
+db.students_club.insertMany([
+  { club_name: "Coding Club", member_count: 50, email: "raj@example.com" },
+  { club_name: "Literature Club", member_count: 30, email: "priya@example.com" },
+  { club_name: "Robotics Club", member_count: 40, email: "anil@example.com" },
+  { club_name: "Debate Club", member_count: 20, email: "sita@example.com" }
+])
+
+// Task 1: Create a single-field index on the club_name field in the students_club collection
+db.students_club.createIndex({ club_name: 1 })
+// Verify the creation of the single-field index
+db.students_club.getIndexes()
+
+// Task 2: Create a compound index on the club_name and member_count fields
+db.students_club.createIndex({ club_name: 1, member_count: -1 })
+// Verify the creation of the compound index
+db.students_club.getIndexes()
+
+// Task 3: Create a unique index on the email field in the students_club collection
+db.students_club.createIndex({ email: 1 }, { unique: true })
+// Verify the creation of the unique index
+db.students_club.getIndexes()
+
+// Task 4: Remove duplicate entries based on the email field
+db.students_club.aggregate([
+  { $group: { _id: "$email", uniqueIds: { $addToSet: "$_id" }, count: { $sum: 1 } } },
+  { $match: { count: { $gt: 1 } } }
+]).forEach((doc) => {
+  doc.uniqueIds.shift()  // Keep one document, remove others
+  db.students_club.deleteMany({ _id: { $in: doc.uniqueIds } })
+})
+
+// Task 5: Drop the unique index on the email field
+db.students_club.dropIndex({ email: 1 })
+// Verify the removal of the unique index
+db.students_club.getIndexes()
+
+// Task 6: Drop the compound index on the club_name and member_count fields
+db.students_club.dropIndex({ club_name: 1, member_count: -1 })
+// Verify the removal of the compound index
+db.students_club.getIndexes()
+
+// Task 7: Retrieve and print the index statistics for the students_club collection
+db.students_club.stats().indexDetails

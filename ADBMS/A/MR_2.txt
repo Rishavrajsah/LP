@@ -1,0 +1,68 @@
+db.transactions.insertMany([
+  {
+    customerId: "customer123",
+    transactionAmount: 200
+  },
+  {
+    customerId: "customer123",
+    transactionAmount: 1500
+  },
+  {
+    customerId: "customer456",
+    transactionAmount: 300
+  },
+  {
+    customerId: "customer456",
+    transactionAmount: 700
+  },
+  {
+    customerId: "customer789",
+    transactionAmount: 50
+  },
+  {
+    customerId: "customer789",
+    transactionAmount: 450
+  }
+]);
+
+db.transactions.mapReduce(
+  function() {
+    // Map function: Emit customerId as the key and the transaction amount as the value
+    emit(this.customerId, this.transactionAmount);
+  },
+  function(key, values) {
+    // Reduce function: Sum all transaction amounts for each customer
+    return Array.sum(values);
+  },
+  {
+    out: "customerTotalTransactions"  // Output collection to store the results
+  }
+);
+
+db.transactions.mapReduce(
+  function() {
+    // Map function: Emit customerId as the key and an object containing the transaction amount as value
+    emit(this.customerId, {
+      max: this.transactionAmount,  // Initial max value for each transaction
+      min: this.transactionAmount   // Initial min value for each transaction
+    });
+  },
+  function(key, values) {
+    // Reduce function: Determine the highest and lowest transaction amounts for each customer
+    var result = { max: -Infinity, min: Infinity };
+
+    // Loop through each value (transaction data for the customer)
+    values.forEach(function(value) {
+      result.max = Math.max(result.max, value.max);  // Update the max transaction amount
+      result.min = Math.min(result.min, value.min);  // Update the min transaction amount
+    });
+
+    return result;
+  },
+  {
+    out: "customerTransactionMinMax"  // Output collection to store the results
+  }
+);
+
+db.customerTransactionMinMax.find();
+
